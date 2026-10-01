@@ -3,7 +3,8 @@
 **Free Kleinanzeigen scraper.** Paste any kleinanzeigen.de search link — with every filter you set on the site — or just type keywords and a city. Get clean, structured listings: price, location with coordinates, photos, category details (make, mileage, rooms, size, condition…) and, optionally, the seller's name, rating, member-since date, view count and — for businesses — phone number and imprint.
 
 - ✅ **Every category and every filter**: cars, real estate, electronics, furniture, jobs, pets… Whatever you filter on the website is applied exactly.
-- ✅ **Two ways to start**: paste links, or search by keyword + location + radius + price.
+- ✅ **Two ways to start**: paste links, or search by keyword + category + location + radius + price and more.
+- ✅ **No 10,000 limit**: large searches (all iPhones, all used cars…) are collected completely — exact totals, no duplicates.
 - ✅ **Fast**: 100 listings per page, hundreds of listings in seconds.
 - ✅ **Seller & contact data** on request, including business phone numbers.
 - ✅ **Free** — you only pay Apify platform usage (typically a few cents per thousand listings).
@@ -50,7 +51,32 @@ Make, model, mileage, first registration, fuel, gearbox, equipment — all taken
 }
 ```
 
-### 4. One listing, or everything a seller offers
+More keyword filters — category, offers only, shipping, "Direkt kaufen", photos only:
+
+```json
+{
+  "searchQueries": ["iphone"],
+  "category": "173",
+  "offerType": "offered",
+  "shipping": "shippable",
+  "buyNowOnly": true,
+  "photosOnly": true,
+  "maxResultsPerSearch": 200
+}
+```
+
+### 4. A complete large search (more than 10,000 listings)
+
+Kleinanzeigen itself shows at most 10,000 listings per search. Set a higher limit and the Actor collects the full result set automatically — in our test, all 13,856 listings for "iphone 15 pro" (the website shows 13,856), with no duplicates.
+
+```json
+{
+  "startUrls": ["https://www.kleinanzeigen.de/s-iphone-15-pro/k0"],
+  "maxResultsPerSearch": 1000000
+}
+```
+
+### 5. One listing, or everything a seller offers
 
 ```json
 {
@@ -74,8 +100,13 @@ Make, model, mileage, first registration, fuel, gearbox, equipment — all taken
 | `minPrice` / `maxPrice` | 🔎 Option B | Price range in €. |
 | `sortBy` | 🔎 Option B | Newest, lowest price, highest price, nearest, recommended. |
 | `sellerType` | 🔎 Option B | Private, commercial, or both. |
-| `includeDetails` | ⚙️ Both | Full description + seller info + view count + business phone/imprint. |
-| `maxResultsPerSearch` | ⚙️ Both | Listings per link/keyword (default 100, max 10,000). |
+| `category` | 🔎 Option B | Any of the 161 categories (main categories include their subcategories). |
+| `offerType` | 🔎 Option B | Offers, requests ("Gesuche"), or both. |
+| `shipping` | 🔎 Option B | Any, shipping possible, or pickup only. |
+| `buyNowOnly` | 🔎 Option B | Only listings with "Direkt kaufen". |
+| `photosOnly` | 🔎 Option B | Only listings with pictures. |
+| `includeDetails` | ⚙️ Both | Full description + seller info + seller's active listings + view count + business phone/imprint. |
+| `maxResultsPerSearch` | ⚙️ Both | Listings per link/keyword (default 100). Above 10,000 the full search is collected automatically. |
 | `maxResults` | ⚙️ Both | Cap for the whole run (0 = no limit). |
 
 Option A and Option B can be combined in one run. Option B's filters apply to keywords only — links always keep their own filters.
@@ -124,6 +155,7 @@ One record per listing. Example with `includeDetails: true` (values anonymized a
   "sellerSince": "2019-03-02T10:11:00.000+0100",
   "sellerRating": 1,
   "sellerBadges": [{ "name": "rating", "level": 2 }, { "name": "friendliness", "level": 1 }],
+  "sellerActiveAds": 4,
   "phone": null,
   "imprint": null,
   "viewCount": 681,
@@ -140,6 +172,7 @@ One record per listing. Example with `includeDetails: true` (values anonymized a
 | Category details (`attributes`), photos, posted/edited date | ✅ | ✅ |
 | Description | short excerpt | **full text** |
 | Seller name, ID, rating, badges, member since | — | ✅ |
+| Seller's listings online now (`sellerActiveAds`) | — | ✅ |
 | View count | — | ✅ |
 | Phone number & imprint | — | ✅ commercial sellers who publish them |
 
@@ -149,7 +182,7 @@ One record per listing. Example with `includeDetails: true` (values anonymized a
 ### 📊 Dataset views
 
 - **Overview** — photo, title, price, city, category, seller type, posted date, link.
-- **Sellers & contact** — seller name, type, phone, rating, member since, street, views (use with `includeDetails`).
+- **Sellers & contact** — seller name, type, phone, rating, member since, active listings, street, views (use with `includeDetails`).
 
 Export as JSON, CSV, Excel, XML or HTML, or pull it through the Apify API, webhooks, Make, Zapier or n8n.
 
@@ -174,6 +207,7 @@ The Actor itself is **free**. You pay only Apify platform usage, measured in our
 | 2 searches, no details | 170 | 4 s | ≈ $0.001 |
 | 3 links + 1 keyword, with details | 91 | 9 s | ≈ $0.001 |
 | 1 search, with details (busy period) | 120 | 17 s | ≈ $0.016 |
+| 1 large search, complete | 13,856 | 4 min | ≈ $0.06 |
 
 The Apify free plan's monthly credit covers tens of thousands of listings.
 
@@ -181,7 +215,8 @@ The Apify free plan's monthly credit covers tens of thousands of listings.
 
 ## ⚡ Limits & good to know
 
-- **10,000 listings per search.** Kleinanzeigen shows at most 10,000 listings for a single search. To collect more, split it — for example into price ranges or locations — and paste each link. The log tells you when a search hit this limit.
+- **Large searches are collected completely.** Kleinanzeigen shows at most 10,000 listings per search; when you ask for more, the Actor collects the full result set in parts and reports the exact total in the log (e.g. "13,856 listing(s) found"). Very large searches (hundreds of thousands of listings) take a while — use `maxResultsPerSearch` to cap them.
+- **Exact totals**: the log shows the real number of matching listings, not just "10,000+".
 - **Page numbers in links are ignored** — collection always starts from the first result, so you get the whole search.
 - **Duplicates are removed** within a run, even across overlapping searches.
 - **Filters are checked**: if a pasted link contains something that could not be applied, the log names it.
@@ -206,7 +241,9 @@ The Apify free plan's monthly credit covers tens of thousands of listings.
 
 **Can I get phone numbers?** Yes, for commercial sellers who publish them — enable `includeDetails`. Private sellers' numbers are not public.
 
-**Which categories work?** All of them. Any filter the website offers for a category is supported through the link.
+**Which categories work?** All of them. Any filter the website offers for a category is supported through the link — including colour, condition and material.
+
+**Can I get more than 10,000 results?** Yes — set `maxResultsPerSearch` above 10,000 and the whole search is collected.
 
 **Can I monitor new listings?** Sort by newest (the default) and schedule the Actor on Apify — each run returns the latest listings first.
 
